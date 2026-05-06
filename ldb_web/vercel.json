@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "ldb_web/app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "ldb_web/app.py"
+    }
+  ]
+}
