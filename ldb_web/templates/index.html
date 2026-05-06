@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LDB Avg Balance Calculator</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0a4d3c,#0d7c5f)}
+.login-box{background:#fff;border-radius:16px;padding:48px 40px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-box h1{font-size:22px;color:#0d7c5f;margin-bottom:6px}
+.login-box p{color:#666;font-size:13px;margin-bottom:28px}
+.login-box input{width:100%;padding:12px 16px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;margin-bottom:14px;transition:border .2s}
+.login-box input:focus{outline:none;border-color:#0d7c5f}
+.login-box button{width:100%;padding:14px;background:#0d7c5f;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:background .2s}
+.login-box button:hover{background:#0a5c47}
+.login-error{background:#fee;color:#c0392b;padding:10px;border-radius:8px;margin-bottom:14px;font-size:13px}
+
+.app-header{background:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e0e0;position:sticky;top:0;z-index:10}
+.app-header h1{font-size:18px;color:#0d7c5f}
+.app-header .user-info{display:flex;align-items:center;gap:12px;font-size:13px;color:#666}
+.btn-logout{padding:6px 16px;background:#e74c3c;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px}
+
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e0e0e0;padding:0 24px}
+.tab{padding:14px 24px;cursor:pointer;font-size:14px;font-weight:500;color:#888;border-bottom:3px solid transparent;transition:all .2s}
+.tab.active{color:#0d7c5f;border-bottom-color:#0d7c5f}
+.tab-content{display:none;padding:20px 24px}
+.tab-content.active{display:block}
+
+.section{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;border:1px solid #eee}
+.section h3{font-size:14px;color:#0d7c5f;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+
+.year-checks{display:flex;gap:20px;flex-wrap:wrap}
+.year-check{display:flex;align-items:center;gap:8px}
+.year-check input[type=checkbox]{width:18px;height:18px;accent-color:#0d7c5f}
+.year-check .status{font-size:11px;padding:2px 8px;border-radius:10px}
+.status.ok{background:#e8f5e9;color:#2e7d32}
+.status.no{background:#fce4ec;color:#c62828}
+
+textarea{width:100%;padding:12px;border:1.5px solid #ddd;border-radius:10px;font-family:Consolas,monospace;font-size:13px;resize:vertical;min-height:120px}
+textarea:focus{outline:none;border-color:#0d7c5f}
+
+.date-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.date-row input{padding:10px 14px;border:1.5px solid #ddd;border-radius:10px;font-family:Consolas;font-size:14px;width:140px}
+.date-row input:focus{outline:none;border-color:#0d7c5f}
+.quick-btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.quick-btn{padding:6px 14px;background:#f5f5f5;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-size:12px;transition:all .2s}
+.quick-btn:hover{background:#e8f5e9;border-color:#0d7c5f}
+
+.fmt-row{display:flex;gap:16px;align-items:center}
+.fmt-row label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px}
+.fmt-row input[type=radio]{accent-color:#0d7c5f}
+
+.btn-run{width:100%;padding:16px;background:#0d7c5f;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-run:hover{background:#0a5c47}
+.btn-run:disabled{background:#ccc;cursor:not-allowed}
+
+.btn-export{padding:10px 20px;border:2px solid #0d7c5f;color:#0d7c5f;background:#fff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-export:hover{background:#e8f5e9}
+
+.progress-bar{height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden;margin-bottom:8px}
+.progress-fill{height:100%;background:#0d7c5f;border-radius:3px;transition:width .3s;width:0}
+
+.status-text{font-size:13px;color:#888;margin-bottom:12px}
+.log-box{background:#1a1a2e;color:#aaffaa;padding:14px;border-radius:10px;font-family:Consolas,monospace;font-size:12px;max-height:200px;overflow-y:auto;line-height:1.6}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.card{background:#fff;border-radius:12px;padding:16px;border:1px solid #eee;text-align:center}
+.card .label{font-size:12px;color:#888;margin-bottom:4px}
+.card .value{font-size:22px;font-weight:700;color:#1a1a2e}
+.card.green .value{color:#0d7c5f}
+.card.blue .value{color:#1565c0}
+.card.orange .value{color:#e65100}
+
+.result-table{width:100%;border-collapse:collapse;font-size:13px}
+.result-table th{background:#f5f5f5;padding:10px 12px;text-align:left;font-weight:600;border-bottom:2px solid #e0e0e0;position:sticky;top:0}
+.result-table td{padding:10px 12px;border-bottom:1px solid #f0f0f0}
+.result-table tr:hover td{background:#f9f9f9}
+.result-table .num{text-align:right;font-family:Consolas,monospace}
+.table-wrap{max-height:400px;overflow-y:auto;border:1px solid #eee;border-radius:10px}
+
+.chart-container{position:relative;height:350px;margin-top:12px}
+.filter-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.filter-row select{padding:10px 14px;border:1.5px solid #ddd;border-radius:10px;font-size:14px;min-width:250px}
+.filter-row select:focus{outline:none;border-color:#0d7c5f}
+
+.file-upload{display:flex;gap:8px;margin-bottom:8px}
+.btn-file{padding:8px 16px;background:#fff;border:1.5px solid #0d7c5f;color:#0d7c5f;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500}
+.btn-file:hover{background:#e8f5e9}
+.file-status{font-size:12px;color:#888;margin-bottom:8px}
+
+@media(max-width:600px){
+  .login-box{width:90%;padding:32px 24px}
+  .tabs{overflow-x:auto}
+  .tab{padding:12px 16px;font-size:13px;white-space:nowrap}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .date-row input{width:120px}
+}
+</style>
+</head>
+<body>
+
+{% if page == "login" %}
+<div class="login-page">
+  <div class="login-box">
+    <h1>LDB Balance Calculator</h1>
+    <p>ລະບົບຄິດໄລ່ຍອດສະເລ່ຍບັນຊີ</p>
+    {% if error %}
+    <div class="login-error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="/login">
+      <input type="text" name="username" placeholder="Username" required autofocus>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">ເຂົ້າສູ່ລະບົບ</button>
+    </form>
+  </div>
+</div>
+
+{% elif page == "main" %}
+<div class="app-header">
+  <h1>LDB Avg Balance Calculator</h1>
+  <div class="user-info">
+    <span>{{ user }}</span>
+    <a href="/logout" class="btn-logout">ອອກ</a>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('calc')">📊 ຄິດໄລ່</div>
+  <div class="tab" onclick="switchTab('dash')">📈 Dashboard</div>
+</div>
+
+<!-- TAB 1: ຄິດໄລ່ -->
+<div id="tab-calc" class="tab-content active">
+  <div class="section">
+    <h3>1. ເລືອກປີ</h3>
+    <div class="year-checks">
+      {% for year, exists in folders.items() %}
+      <label class="year-check">
+        <input type="checkbox" value="{{ year }}" class="year-cb" {% if year=="2025" %}checked{% endif %}>
+        ປີ {{ year }}
+        <span class="status {{ 'ok' if exists else 'no' }}">{{ '✓' if exists else '✗' }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>2. ເລກບັນຊີ</h3>
+    <div class="file-upload">
+      <label class="btn-file">📁 ເລືອກໄຟລ໌
+        <input type="file" accept=".xlsx,.xls,.csv" onchange="loadFile(this)" style="display:none">
+      </label>
+      <button class="btn-file" onclick="clearContracts()">🗑 ລ້າງ</button>
+    </div>
+    <div class="file-status" id="file-status"></div>
+    <textarea id="contracts" placeholder="ວາງເລກບັນຊີ (1 ແຖວ/ບັນຊີ)"></textarea>
+    <div style="text-align:right;font-size:12px;color:#888;margin-top:4px" id="count-label">0 ບັນຊີ</div>
+  </div>
+
+  <div class="section">
+    <h3>3. ຊ່ວງວັນທີ</h3>
+    <div class="date-row">
+      <span>ເລີ່ມ:</span>
+      <input type="text" id="start-date" value="20250101" maxlength="8">
+      <span>ຫາ:</span>
+      <input type="text" id="end-date" value="20251231" maxlength="8">
+    </div>
+    <div class="quick-btns">
+      <button class="quick-btn" onclick="setDate('thisYear')">ປີນີ້</button>
+      <button class="quick-btn" onclick="setDate('lastYear')">ປີກ່ອນ</button>
+      <button class="quick-btn" onclick="setDate('3m')">3 ເດືອນ</button>
+      <button class="quick-btn" onclick="setDate('all')">ທັງໝົດ</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <button class="btn-run" id="btn-run" onclick="runCalculation()">🚀 ຄິດໄລ່ຍອດສະເລ່ຍ</button>
+    <div style="margin-top:12px">
+      <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+      <div class="status-text" id="status">ພ້ອມໃຊ້ງານ</div>
+    </div>
+  </div>
+
+  <div class="section" id="log-section" style="display:none">
+    <h3>📋 Log</h3>
+    <div class="log-box" id="log"></div>
+  </div>
+</div>
+
+<!-- TAB 2: Dashboard -->
+<div id="tab-dash" class="tab-content">
+  <div id="dash-empty" style="text-align:center;padding:80px 20px;color:#888">
+    <p style="font-size:40px;margin-bottom:12px">📈</p>
+    <p style="font-size:16px">ກຣາຟຈະສະແດງຫຼັງຈາກຄິດໄລ່ສຳເລັດ</p>
+    <p style="font-size:13px;margin-top:8px">ກະລຸນາໄປ Tab ຄິດໄລ່ ແລ້ວກົດ Run ກ່ອນ</p>
+  </div>
+
+  <div id="dash-content" style="display:none">
+    <div class="cards" id="dash-cards"></div>
+
+    <div class="section">
+      <div class="filter-row">
+        <span>🔍 ບັນຊີ:</span>
+        <select id="dash-filter" onchange="updateChart()">
+          <option value="all">ທັງໝົດ (ລວມ)</option>
+        </select>
+        <span style="margin-left:16px">📅 ຊ່ວງເວລາ:</span>
+        <input type="date" id="slicer-start" onchange="updateChart()" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+        <span>—</span>
+        <input type="date" id="slicer-end" onchange="updateChart()" style="padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:13px">
+        <button class="quick-btn" onclick="sliceAll()">ທັງໝົດ</button>
+        <button class="quick-btn" onclick="sliceMonth(1)">1ເດືອນ</button>
+        <button class="quick-btn" onclick="sliceMonth(3)">3ເດືອນ</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="dash-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;border:none;padding:0">📋 ຍອດສະເລ່ຍຕໍ່ບັນຊີ</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn-export" onclick="exportData('csv')">⬇ CSV ສະເລ່ຍ</button>
+          <button class="btn-export" onclick="exportData('xlsx')">⬇ Excel ສະເລ່ຍ</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="result-table">
+          <thead><tr><th>Contract</th><th>Currency</th><th style="text-align:right">Average Balance</th><th style="text-align:right">Avg Contract Bal</th><th style="text-align:right">Min</th><th style="text-align:right">Max</th><th style="text-align:right">Days</th></tr></thead>
+          <tbody id="result-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;border:none;padding:0">📅 ຂໍ້ມູນລາຍວັນ</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn-export" onclick="exportDaily('csv')">⬇ CSV ລາຍວັນ</button>
+          <button class="btn-export" onclick="exportDaily('xlsx')">⬇ Excel ລາຍວັນ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let resultData = null;
+let dailyData = null;
+let chartInstance = null;
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', (name==='calc' && i===0) || (name==='dash' && i===1));
+  });
+  document.getElementById('tab-calc').classList.toggle('active', name==='calc');
+  document.getElementById('tab-dash').classList.toggle('active', name==='dash');
+}
+
+function updateCount() {
+  const t = document.getElementById('contracts').value.trim();
+  const n = t ? t.split('\n').filter(x=>x.trim()).length : 0;
+  document.getElementById('count-label').textContent = n + ' ບັນຊີ';
+}
+document.getElementById('contracts').addEventListener('input', updateCount);
+
+function clearContracts() {
+  document.getElementById('contracts').value = '';
+  updateCount();
+  document.getElementById('file-status').textContent = '';
+}
+
+function loadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  if (file.name.endsWith('.csv')) {
+    reader.onload = e => {
+      const lines = e.target.result.split('\n').map(l=>l.split(',')[0].trim()).filter(x=>x && x.toLowerCase()!=='contract' && x!=='ເລກບັນຊີ');
+      document.getElementById('contracts').value = lines.join('\n');
+      updateCount();
+      document.getElementById('file-status').textContent = '✅ ' + lines.length + ' ບັນຊີ (' + file.name + ')';
+    };
+    reader.readAsText(file);
+  } else {
+    document.getElementById('file-status').textContent = '⚠ ສຳລັບ Excel ກະລຸນາ copy ເລກບັນຊີມາວາງ';
+  }
+  input.value = '';
+}
+
+function setDate(mode) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const sd = document.getElementById('start-date');
+  const ed = document.getElementById('end-date');
+  if (mode==='thisYear') { sd.value=y+'0101'; ed.value=y+'1231'; }
+  else if (mode==='lastYear') { sd.value=(y-1)+'0101'; ed.value=(y-1)+'1231'; }
+  else if (mode==='3m') {
+    let m=now.getMonth()-2, yr=y;
+    if(m<0){m+=12;yr--}
+    sd.value=yr+String(m+1).padStart(2,'0')+'01';
+    ed.value=y+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
+  }
+  else { sd.value='20240101'; ed.value='20261231'; }
+}
+
+function addLog(msg) {
+  const log = document.getElementById('log');
+  const sec = document.getElementById('log-section');
+  sec.style.display = 'block';
+  const ts = new Date().toLocaleTimeString('en',{hour12:false});
+  log.innerHTML += '['+ts+'] '+msg+'\n';
+  log.scrollTop = log.scrollHeight;
+}
+
+function fmt(n) { return n ? Number(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2}) : '0'; }
+function fmtInt(n) { return n ? Number(n).toLocaleString('en') : '0'; }
+
+async function runCalculation() {
+  const btn = document.getElementById('btn-run');
+  const prog = document.getElementById('progress');
+  const status = document.getElementById('status');
+
+  const years = [...document.querySelectorAll('.year-cb:checked')].map(c=>c.value);
+  const contracts = document.getElementById('contracts').value;
+  const start_date = document.getElementById('start-date').value;
+  const end_date = document.getElementById('end-date').value;
+
+  if (!contracts.trim()) { alert('ກະລຸນາປ້ອນເລກບັນຊີ'); return; }
+  if (!years.length) { alert('ກະລຸນາເລືອກປີ'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ ກຳລັງຄິດໄລ່...';
+  prog.style.width = '30%';
+  status.textContent = 'ກຳລັງ scan ໄຟລ໌...';
+  document.getElementById('log').innerHTML = '';
+  addLog('ເລີ່ມຄິດໄລ່...');
+
+  try {
+    prog.style.width = '60%';
+    const resp = await fetch('/api/calculate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ contracts, years, start_date, end_date })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data.error || 'Server error');
+    }
+
+    prog.style.width = '100%';
+    resultData = data;
+    dailyData = data.daily;
+
+    const s = data.stats;
+    addLog('ພົບ ' + s.total_raw + ' ແຖວ (' + s.files_scanned + ' ໄຟລ໌)');
+    addLog('Dedup → ' + s.total_days + ' unique days');
+    addLog('✅ ' + s.total_accounts + ' ບັນຊີ (' + s.elapsed + 's)');
+
+    status.textContent = '✅ ສຳເລັດ! ' + s.total_accounts + ' ບັນຊີ (' + s.elapsed + 's)';
+
+    showDashboard(data);
+    switchTab('dash');
+
+  } catch (e) {
+    addLog('❌ ' + e.message);
+    status.textContent = '❌ ' + e.message;
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 ຄິດໄລ່ຍອດສະເລ່ຍ';
+  }
+}
+
+function showDashboard(data) {
+  document.getElementById('dash-empty').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
+
+  const s = data.stats;
+  document.getElementById('dash-cards').innerHTML = `
+    <div class="card green"><div class="label">ສະເລ່ຍລວມ</div><div class="value">${fmtInt(s.grand_avg)}</div></div>
+    <div class="card blue"><div class="label">ຈຳນວນບັນຊີ</div><div class="value">${s.total_accounts}</div></div>
+    <div class="card"><div class="label">Unique Days</div><div class="value">${fmtInt(s.total_days)}</div></div>
+    <div class="card orange"><div class="label">ເວລາ Scan</div><div class="value">${s.elapsed}s</div></div>
+  `;
+
+  // Filter dropdown
+  const sel = document.getElementById('dash-filter');
+  sel.innerHTML = '<option value="all">ທັງໝົດ (ລວມ)</option>';
+  const contracts = [...new Set(data.daily.map(d=>d.Contract))].sort();
+  contracts.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
+
+  // Set timeline slicer min/max from data
+  const allDates = data.daily.map(d=>d['Processing Date']).sort();
+  if (allDates.length > 0) {
+    const minD = allDates[0], maxD = allDates[allDates.length-1];
+    const toISO = d => d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8);
+    document.getElementById('slicer-start').value = toISO(minD);
+    document.getElementById('slicer-end').value = toISO(maxD);
+    document.getElementById('slicer-start').min = toISO(minD);
+    document.getElementById('slicer-end').max = toISO(maxD);
+  }
+
+  // Table
+  const tbody = document.getElementById('result-body');
+  tbody.innerHTML = '';
+  data.summary.forEach(r => {
+    tbody.innerHTML += `<tr>
+      <td>${r.Contract}</td>
+      <td>${r.Currency || 'LAK'}</td>
+      <td class="num">${fmt(r.avg)}</td>
+      <td class="num">${fmt(r.avg_contract_bal || 0)}</td>
+      <td class="num">${fmt(r.min)}</td>
+      <td class="num">${fmt(r.max)}</td>
+      <td class="num">${r.days}</td>
+    </tr>`;
+  });
+
+  updateChart();
+}
+
+// Timeline slicer helpers
+function sliceAll() {
+  const allDates = dailyData.map(d=>d['Processing Date']).sort();
+  if (allDates.length===0) return;
+  const toISO = d => d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8);
+  document.getElementById('slicer-start').value = toISO(allDates[0]);
+  document.getElementById('slicer-end').value = toISO(allDates[allDates.length-1]);
+  updateChart();
+}
+
+function sliceMonth(m) {
+  const allDates = dailyData.map(d=>d['Processing Date']).sort();
+  if (allDates.length===0) return;
+  const maxD = allDates[allDates.length-1];
+  const toISO = d => d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8);
+  document.getElementById('slicer-end').value = toISO(maxD);
+  const endDate = new Date(toISO(maxD));
+  endDate.setMonth(endDate.getMonth() - m);
+  document.getElementById('slicer-start').value = endDate.toISOString().slice(0,10);
+  updateChart();
+}
+
+function getSlicerRange() {
+  const sv = document.getElementById('slicer-start').value;
+  const ev = document.getElementById('slicer-end').value;
+  const start = sv ? sv.replace(/-/g,'') : '00000000';
+  const end = ev ? ev.replace(/-/g,'') : '99999999';
+  return { start, end };
+}
+
+function updateChart() {
+  if (!dailyData) return;
+  const filter = document.getElementById('dash-filter').value;
+  const range = getSlicerRange();
+
+  // Filter by account + date range
+  let filtered = dailyData.filter(d => d['Processing Date'] >= range.start && d['Processing Date'] <= range.end);
+
+  let chartData;
+  if (filter === 'all') {
+    const byDate = {};
+    filtered.forEach(d => {
+      byDate[d['Processing Date']] = (byDate[d['Processing Date']]||0) + d.Balance;
+    });
+    chartData = Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  } else {
+    chartData = filtered
+      .filter(d => d.Contract === filter)
+      .sort((a,b) => a['Processing Date'].localeCompare(b['Processing Date']))
+      .map(d => [d['Processing Date'], d.Balance]);
+  }
+
+  if (chartData.length === 0) return;
+
+  // Update cards with filtered range stats
+  const values = chartData.map(d => d[1]);
+  const avg = values.reduce((a,b)=>a+b,0) / values.length;
+  const mn = Math.min(...values);
+  const mx = Math.max(...values);
+  const filteredContracts = filter==='all' ? new Set(filtered.map(d=>d.Contract)).size : 1;
+  document.getElementById('dash-cards').innerHTML = `
+    <div class="card green"><div class="label">ສະເລ່ຍ (ຊ່ວງທີ່ເລືອກ)</div><div class="value">${fmtInt(avg)}</div></div>
+    <div class="card blue"><div class="label">ຈຳນວນບັນຊີ</div><div class="value">${filteredContracts}</div></div>
+    <div class="card"><div class="label">ຈຳນວນວັນ</div><div class="value">${fmtInt(chartData.length)}</div></div>
+    <div class="card orange"><div class="label">ສູງສຸດ</div><div class="value">${fmtInt(mx)}</div></div>
+  `;
+
+  const labels = chartData.map(d => d[0].slice(4,6)+'/'+d[0].slice(6,8));
+
+  if (chartInstance) chartInstance.destroy();
+
+  const ctx = document.getElementById('dash-chart').getContext('2d');
+  const isLine = values.length > 60;
+
+  chartInstance = new Chart(ctx, {
+    type: isLine ? 'line' : 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Balance',
+        data: values,
+        backgroundColor: 'rgba(13,124,95,0.6)',
+        borderColor: '#0d7c5f',
+        borderWidth: isLine ? 2 : 0,
+        fill: isLine,
+        pointRadius: isLine ? 0 : undefined,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: { annotations: {} },
+        tooltip: {
+          callbacks: {
+            label: ctx => 'Balance: ' + Number(ctx.raw).toLocaleString('en',{minimumFractionDigits:2})
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 20, font: { size: 10 } },
+          grid: { display: false }
+        },
+        y: {
+          ticks: {
+            callback: v => v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v,
+            font: { size: 10 }
+          },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        }
+      }
+    }
+  });
+}
+
+async function saveAndExport(kind, format) {
+  if (!resultData) { alert('ບໍ່ມີຂໍ້ມູນ. ກະລຸນາຄິດໄລ່ກ່ອນ.'); return; }
+
+  let dataToSave = { summary: resultData.summary, daily: dailyData };
+
+  // ຖ້າ export daily ກັບ filter → filter data ກ່ອນ save
+  if (kind === 'daily') {
+    const range = getSlicerRange();
+    const filter = document.getElementById('dash-filter').value;
+    let filtered = dailyData.filter(d => d['Processing Date'] >= range.start && d['Processing Date'] <= range.end);
+    if (filter !== 'all') filtered = filtered.filter(d => d.Contract === filter);
+    if (filtered.length === 0) { alert('ບໍ່ມີຂໍ້ມູນໃນຊ່ວງເວລາທີ່ເລືອກ'); return; }
+    dataToSave.daily = filtered;
+  }
+
+  try {
+    // Step 1: Save data to server
+    const saveResp = await fetch('/api/save_for_export', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(dataToSave)
+    });
+    if (!saveResp.ok) throw new Error('Save failed');
+
+    // Step 2: Download via GET
+    window.location.href = '/api/export/' + kind + '/' + format;
+  } catch(e) { alert('Export error: ' + e.message); }
+}
+
+function exportData(format) { saveAndExport('summary', format); }
+function exportDaily(format) { saveAndExport('daily', format); }
+</script>
+{% endif %}
+</body>
+</html>
